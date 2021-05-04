@@ -179,7 +179,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         };
 
         (:~
-        : Returns all following regions of a specific type of a TextRegion in a list of page elements
+        : Returns all following regions of a specific type of a TextRegion until the start of the next text in a list of page elements
         :
         : @param $pages                 Page elements.        
         : @param $startRegion           TextRegion.
@@ -311,16 +311,16 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
 
 (: test functions :)
     (:~
-        : Tests if a selected TextRegion is of a certain type
-        :          
-        : @param $region       TextRegion. 
-        : @param $regionType   Transkribus structure type.
-        : @return              xs:boolean
-        :)  
+    : Tests if a selected TextRegion is of a certain type
+    :          
+    : @param $region       TextRegion. 
+    : @param $regionType   Transkribus structure type.
+    : @return              xs:boolean
+    :)  
     declare function trapi:hasRegionType($region as element(), $regionType as xs:string) as xs:boolean
-        {    
-            ends-with($region/@custom, concat('{type:', $regionType,';}'))
-        };
+    {    
+        ends-with($region/@custom, concat('{type:', $regionType,';}'))
+    };
 
 
 (: parsing functions :)
@@ -366,6 +366,16 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     };
 
 (: json functions:)
+
+    (:~
+    : Helper Function for JSON-Export. Gets metadata of a text.
+    :          
+    : @param $pages                 Page elements.        
+    : @param $startRegion           TextRegion. 
+    : @param $followingRegionType   Transkribus structure type.
+    : @param $chapterRegionType   Transkribus structure type.
+    : @return element()*
+    :)  
     declare function trapi:_getTextMetadata(
         $pages as element()*, 
         $startRegion as element()?, 
@@ -389,6 +399,15 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }        
     };
 
+    (:~
+    : Helper Function for JSON-Export. Gets content of a text.
+    :          
+    : @param $pages                 Page elements.        
+    : @param $startRegion           TextRegion. 
+    : @param $followingRegionType   Transkribus structure type.
+    : @param $chapterRegionType     Transkribus structure type.
+    : @return element()*
+    :)  
     declare function trapi:_getTextData(
         $pages as element()*, 
         $startRegion as element()?, 
@@ -502,6 +521,12 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }
     };
 
+    (:~
+    : Returns a list of the documents in a database as JSON
+    :          
+    : @param $db                    Name of database.        
+    : @return JSON
+    :)
     declare function trapi:getDocumentsJSON($db as xs:string?)
     {
         let $result := 
@@ -523,6 +548,13 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }
     };
 
+    (:~
+    : Returns the selected document in a database as JSON
+    :          
+    : @param $db                    Name of database.      
+    : @param $docId                 ID of the document. 
+    : @return JSON
+    :)
     declare function trapi:getDocumentJSON($db as xs:string?, $docId as xs:string?)
     {
         let $result := 
@@ -546,7 +578,16 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }
     };
 
-
+    (:~
+    : Returns a list of texts in a document, specified by structural annotations in Transkribus.
+    :          
+    : @param $db                    Name of database.      
+    : @param $docId                 ID of the document.
+    : @param $startRegionType       TextRegion type, start of a text.
+    : @param $followingRegionType   TextRegion type, following regions of a text.
+    : @param $chapterRegionType     TextRegion type, optional heading of a text.
+    : @return JSON
+    :)
     declare function trapi:getTextsJSON(
         $db as xs:string?, 
         $docId as xs:string?, 
@@ -573,6 +614,16 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }
     };
 
+    (:~
+    : Returns a text in a document, specified by structural annotations in Transkribus.
+    :          
+    : @param $db                    Name of database.      
+    : @param $docId                 ID of the document.
+    : @param $startRegionId         ID of the start region of the text.
+    : @param $followingRegionType   TextRegion type, following regions of a text.
+    : @param $chapterRegionType     TextRegion type, optional heading of a text.
+    : @return JSON
+    :)
     declare function trapi:getTextJSON(
         $db as xs:string?, 
         $docId as xs:string?, 
