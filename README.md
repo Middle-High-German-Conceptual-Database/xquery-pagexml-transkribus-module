@@ -4,6 +4,8 @@ This module provides access to Transkribus PageXML files via Xquery functions. I
 
 ## Usage
 
+See Documentation https://middle-high-german-conceptual-database.github.io/xquery-pagexml-transkribus-module/
+
 ## Transkribus specific features
 
 Transkribus uses the PageXML format to store its data. There are a couple extensions including the use of the attribute @custom to store annotations on text regions, lines and tokens.
