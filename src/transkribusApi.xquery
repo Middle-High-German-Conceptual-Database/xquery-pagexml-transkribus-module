@@ -43,6 +43,17 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             (db:open($db)//mets:mets[string(//*:docId[1]) = $docId])[1]
         };
 
+        (:~
+        : Returns a single mets:mets document selected by docId.
+        :
+        : @param $document      document.
+        : @return               xs:string.
+        :)
+        declare function trapi:getDocumentId($document as element()) as xs:string
+        {            
+            string(($document//*:docId)[1])
+        };
+
     (: Pages :)
         (:~
         : Returns all page:PcGts elements of a document selected by docId.
