@@ -1,37 +1,11 @@
-## Welcome to GitHub Pages
+# XQuery Module API for Transkribus PageXML
 
-You can use the [editor on GitHub](https://github.com/Middle-High-German-Conceptual-Database/xquery-pagexml-transkribus-module/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+This module provides access to Transkribus PageXML files via Xquery functions. It is designed to be used in context of a Basex xml database, but should work with other xml databases as well.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Usage
 
-### Markdown
+## Transkribus specific features
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+Transkribus uses the PageXML format to store its data. There are a couple extensions including the use of the attribute @custom to store annotations on text regions, lines and tokens.
 
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/Middle-High-German-Conceptual-Database/xquery-pagexml-transkribus-module/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+This API provides access to these structured strings. Furthermore it provides a simple mechanic to query structures spanning over multiple pages, which can be linked using Transkribus structural metadata.
