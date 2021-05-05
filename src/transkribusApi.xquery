@@ -53,6 +53,70 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         {            
             string(($document//*:docId)[1])
         };
+        
+        
+        (:~
+        : Returns unique annotated transcribus structure types
+        : @param $db        database name.
+        : @param $docId     document id. 
+        : @return           xs:string*
+        :)  
+        declare function trapi:getRegionTypes($db as xs:string?, $docId as xs:string?) as xs:string*
+        {
+            let $pages := trapi:getPages($db, $docId)
+            let $result :=
+                for $textregion in trapi:getRegions($pages)
+                return trapi:getRegionType($textregion)
+            return distinct-values($result)
+        };        
+        
+        (:~
+        : Returns unique annotated transcribus textual annotation tags
+        : @param $db        database name.
+        : @param $docId     document id. 
+        : @return           xs:string*
+        :)  
+        declare function trapi:getTextualAnnotationTags($db as xs:string?, $docId as xs:string?) as xs:string*
+        {
+            let $pages := trapi:getPages($db, $docId)
+            let $result :=
+                for $textline in trapi:getLines($pages)
+                return trapi:parseTranskribusCustomAttribute($textline/@custom)
+            return distinct-values($result//*:annotation/@tag)
+        };
+        
+        (:~
+        : Returns unique annotated properties of selected transcribus textual annotation tag 
+        : @param $db        database name.
+        : @param $docId     document id. 
+        : @param $tag       Transkribus textual annotation tag. 
+        : @return           element()
+        :)  
+        declare function trapi:getTextualAnnotationTags($db as xs:string?, $docId as xs:string?, $tag as xs:string) as xs:string*
+        {
+            let $pages := trapi:getPages($db, $docId)
+            let $result :=
+                for $textline in trapi:getLines($pages)
+                return trapi:parseTranskribusCustomAttribute($textline/@custom)            
+            return distinct-values($result//*:annotation[@tag=$tag]/*:attr/@key)            
+        };
+        
+        (:~
+        : Returns unique values of annotated property of selected transcribus textual annotation tag 
+        : @param $db        database name.
+        : @param $docId     document id. 
+        : @param $tag       Transkribus textual annotation tag. 
+        : @param $property  Transkribus textual annotation tag property. 
+        : @return           element()
+        :)  
+        declare function trapi:getTextualAnnotationTagProperties($db as xs:string?, $docId as xs:string?, $tag as xs:string, $property as xs:string) as xs:string*
+        {
+            let $pages := trapi:getPages($db, $docId)
+            let $result :=
+                for $textline in trapi:getLines($pages)
+                return trapi:parseTranskribusCustomAttribute($textline/@custom)            
+            return distinct-values($result//*:annotation[@tag=$tag]/*:attr[@key=$property]/@value)            
+        };
 
     (: Pages :)
         (:~
@@ -297,15 +361,69 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
 
     (: TextLines :)
         (:~
-        : Returns all TextLine belonging to selected TextRegion
+        : Returns all TextLine belonging to selected element
         :          
-        : @param $textRegions           TextRegions. 
+        : @param $element           Element. 
+        : @return                   element()*
+        :)  
+        declare function trapi:getLines($elements as element()*) as element()*
+        {
+            for $element in $elements
+            return $element//*:TextLine
+        };
+        
+        (:~
+        : Returns all TextLine belonging to selected TextRegion with a specific annotation tag
+        :          
+        : @param $textRegions           TextRegions.
+        : @param $tag                   Annotation tag. 
         : @return                       element()*
         :)  
-        declare function trapi:getLines($textRegions as element()*) as element()*
+        declare function trapi:getLines(
+        $textRegions as element()*,
+        $tag as xs:string) as element()*
         {
-            for $textRegion in $textRegions
-            return $textRegion/*:TextLine
+            for $textLine in $textRegions/*:TextLine
+            where contains($textLine/@custom,concat($tag," {"))
+            return $textLine
+        };
+        
+        (:~
+        : Returns all TextLine belonging to selected TextRegion with a specific annotation tag and attribute key
+        :          
+        : @param $textRegions           TextRegions.
+        : @param $tag                   Annotation tag. 
+        : @param $key                   Attribute key. 
+        : @return                       element()*
+        :)  
+        declare function trapi:getLines(
+        $textRegions as element()*,
+        $tag as xs:string,
+        $key as xs:string) as element()*
+        {
+            for $textLine in trapi:getLines($textRegions,$tag)
+            where trapi:parseTranskribusCustomAttribute($textLine/@custom)//*:attr[@key=$key]
+            return $textLine
+        };
+        
+        (:~
+        : Returns all TextLine belonging to selected TextRegion with a specific annotation tag and attribute key/value
+        :          
+        : @param $textRegions           TextRegions.
+        : @param $tag                   Annotation tag. 
+        : @param $key                   Attribute key. 
+        : @param $key                   Attribute value. 
+        : @return                       element()*
+        :)  
+        declare function trapi:getLines(
+        $textRegions as element()*,
+        $tag as xs:string,
+        $key as xs:string, 
+        $value as xs:string) as element()*
+        {
+            for $textLine in trapi:getLines($textRegions,$tag)
+            where trapi:parseTranskribusCustomAttribute($textLine/@custom)//*:attr[@key=$key][@value=$value]
+            return $textLine
         };
 
 
@@ -346,6 +464,8 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     :)
     declare function trapi:parseTranskribusCustomAttribute($custom as xs:string?) as element()
     {   
+        let $custom := trapi:replaceTranskribusEscapedEntities($custom)
+        return
         <annotations>
         {
             for $annotation in analyze-string($custom, "[^\{]+\{[^\}]+\}")//fn:match
@@ -364,6 +484,23 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         }
         </annotations>
     };
+    
+(: support functions :)
+    declare function trapi:replaceTranskribusEscapedEntities($string as xs:string?) as xs:string 
+    {   
+        let $matches := analyze-string($string, "\\u(\w{4})")//fn:match 
+        return if (exists($matches)) 
+        then
+            let $cp := string($matches[1]//*:group[1])
+            return trapi:replaceTranskribusEscapedEntities(
+                    replace(
+                        $string,
+                        concat('\\u',$cp),                        
+                        codepoints-to-string(xs:int(convert:integer-from-base($cp,16))))
+                   )
+        else
+        $string
+    };    
 
 (: json functions:)
 
