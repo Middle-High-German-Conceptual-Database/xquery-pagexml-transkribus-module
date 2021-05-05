@@ -384,7 +384,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         $tag as xs:string) as element()*
         {
             for $textLine in $textRegions/*:TextLine
-            where contains($textLine/@custom,concat($tag," {"))
+            where contains(trapi:replaceTranskribusEscapedEntities($textLine/@custom),concat($tag," {"))
             return $textLine
         };
         
@@ -437,7 +437,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     :)  
     declare function trapi:hasRegionType($region as element(), $regionType as xs:string) as xs:boolean
     {    
-        ends-with($region/@custom, concat('{type:', $regionType,';}'))
+        ends-with(trapi:replaceTranskribusEscapedEntities($region/@custom), concat('{type:', $regionType,';}'))
     };
 
 
