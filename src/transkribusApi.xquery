@@ -486,6 +486,12 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     };
     
 (: support functions :)
+    (:~
+    : Replace unicode number references '\u0020' in Transkribus data
+    :          
+    : @param $string
+    : @return $string
+    :) 
     declare function trapi:replaceTranskribusEscapedEntities($string as xs:string?) as xs:string 
     {   
         let $matches := analyze-string($string, "\\u(\w{4})")//fn:match 
