@@ -195,11 +195,8 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         declare function trapi:getRegionType($region as element()) as xs:string
         {    
             let $annotations := trapi:parseTranskribusCustomAttribute($region/@custom)
-            return 
-                if (exists($annotations)) then
-                string($annotations//*:annotation[@tag='structure']/*:attr[@key='type']/@value)
-                else
-                'NONE'
+            return                 
+                ($annotations//*:annotation[@tag='structure']/*:attr[@key='type'])[1]/@value
         };        
 
         (:~
