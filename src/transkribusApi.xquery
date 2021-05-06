@@ -236,7 +236,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             let $followingRegionsCurrentPage := $startRegion/following::*:TextRegion
             let $i := index-of($pages, $currentPage) 
             let $followingRegionsOtherPages :=
-                for $page in subsequence($pages, $i, 1) (:count($pages) - $i:)
+                for $page in subsequence($pages, $i + 1, count($pages) - $i) (:count($pages) - $i:)
                 return
                     $page//*:TextRegion
             return 
