@@ -129,7 +129,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         declare function trapi:getPages($db as xs:string?, $docId as xs:string?) as element()*
         {
             for $page in db:open($db)//page:PcGts[//*:TranskribusMetadata[@docId=$docId]]
-            let $pageNumber := $page//*:TranskribusMetadata/@pageNr
+            let $pageNumber := xs:int($page//*:TranskribusMetadata/@pageNr)
             order by $pageNumber
             return $page
         };
