@@ -192,7 +192,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         : @param $region    TextRegion.        
         : @return           xs:string.
         :)
-        declare function trapi:getRegionType($region as element()) as xs:string
+        declare function trapi:getRegionType($region as element()) as xs:string?
         {    
             let $annotations := trapi:parseTranskribusCustomAttribute($region/@custom)
             return                 
@@ -739,7 +739,10 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         let $pages := trapi:getPages($db, $docId)
         let $result := 
             <array xmlns="http://www.w3.org/2005/xpath-functions"> 
-                {   for $startRegion in trapi:getRegions($pages, $startRegionType)                 
+                {   for $startRegion in trapi:getRegions($pages, $startRegionType)
+                    (:let $textRegions := trapi:getTextRegions($pages, $startRegion, $followingRegionType)
+                    let $pageRange := trapi:getPageRange($textRegions)
+                    order by $pageRange:)
                     return
                         <map xmlns="http://www.w3.org/2005/xpath-functions">
                             {trapi:_getTextMetadata($pages, $startRegion, $followingRegionType, $chapterRegionType)}
