@@ -129,7 +129,8 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         declare function trapi:getPages($db as xs:string?, $docId as xs:string?) as element()*
         {
             for $page in db:open($db)//page:PcGts[//*:TranskribusMetadata[@docId=$docId]]
-            order by $page//*:TranskribusMetadata[@pageNr]
+            let $pageNumber := $page//*:TranskribusMetadata/@pageNr
+            order by $pageNumber
             return $page
         };
 
@@ -139,9 +140,20 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         : @param $element   xml element.        
         : @return element().
         :)
-        declare function trapi:currentPage($element as element()) as element()
+        declare function trapi:getCurrentPage($element as element()) as element()
         {
             ($element/ancestor-or-self::*:PcGts)[1]        
+        };
+        
+        (:~
+        : Returns the pagenumber of the selected element.
+        :
+        : @param $element   textregion element.        
+        : @return           xs:string.
+        :)
+        declare function trapi:getPageNumber($element as element()) as xs:string
+        {
+            trapi:getCurrentPage($element)//*:TranskribusMetadata/@pageNr          
         };
         
         (:~
@@ -154,12 +166,24 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         {
             let $TranskribusMetadatas := 
                 for $textRegion in $textRegions
-                return string(trapi:currentPage($textRegion)//*:TranskribusMetadata/@pageNr)
+                return string(trapi:getCurrentPage($textRegion)//*:TranskribusMetadata/@pageNr)
             return string-join(distinct-values($TranskribusMetadatas), ', ')
         };    
 
     (: TextRegions :)
         
+        (:~
+        : Returns the selected textregion of selected pages.
+        :
+        : @param $pages   pagexml pages.        
+        : @param $regionId   xs:string.     
+        : @return element().
+        :)
+        declare function trapi:getRegion($pages as element()*, $regionId as xs:string) as element()
+        {
+            ($pages//*:TextRegion[@id=$regionId])[1]
+        };
+
         (:~
         : Returns the all textregions of selected pages.
         :
@@ -184,7 +208,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             where trapi:getRegionType($region) eq $regionType
             return 
             $region 
-        };
+        };     
 
         (:~
         : Returns the region type (Transkribus structure type) of a selected textregion.
@@ -208,17 +232,17 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         :)
         declare function trapi:getFollowingRegions($pages as element()*, $startRegion as element()) as element()*
         {
-            let $currentPage := trapi:currentPage($startRegion)
+            let $currentPage := trapi:getCurrentPage($startRegion)
             let $followingRegionsCurrentPage := $startRegion/following::*:TextRegion
-            let $i := index-of($pages, $currentPage) + 1 
+            let $i := index-of($pages, $currentPage) 
             let $followingRegionsOtherPages :=
-                for $page in subsequence($pages, $i, count($pages))
+                for $page in subsequence($pages, $i, 1) (:count($pages) - $i:)
                 return
                     $page//*:TextRegion
             return 
                 if (count($followingRegionsOtherPages) > 0)
                 then
-                    ($followingRegionsCurrentPage, $followingRegionsOtherPages)
+                    $followingRegionsOtherPages (:($followingRegionsCurrentPage, $followingRegionsOtherPages):)
                 else $followingRegionsCurrentPage
         };
             
@@ -240,7 +264,8 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         };
 
         (:~
-        : Returns all following regions of a specific type of a TextRegion until the start of the next text in a list of page elements
+        : Returns all following regions of a specific type of a TextRegion 
+        : until the start of the next text in a list of page elements
         :
         : @param $pages                 Page elements.        
         : @param $startRegion           TextRegion.
@@ -249,7 +274,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         :)   
         declare function trapi:getFollowingTextRegions(
             $pages as element()*, 
-            $startRegion as element(), 
+            $startRegion as element(),
             $followingRegionType as xs:string?) as element()*
         {
             let $followingRegions := trapi:getFollowingRegions($pages, $startRegion)
@@ -284,7 +309,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         :)
         declare function trapi:getPrecedingRegions($pages as element()*, $startRegion as element()) as element()*
         {
-            let $currentPage := trapi:currentPage($startRegion)
+            let $currentPage := trapi:getCurrentPage($startRegion)
             let $precedingRegionsCurrentPage := $startRegion/preceding::*:TextRegion
             let $i := index-of($pages, $currentPage)    
             let $precedingRegionsOtherPages :=
@@ -739,10 +764,9 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         let $pages := trapi:getPages($db, $docId)
         let $result := 
             <array xmlns="http://www.w3.org/2005/xpath-functions"> 
-                {   for $startRegion in trapi:getRegions($pages, $startRegionType)
-                    (:let $textRegions := trapi:getTextRegions($pages, $startRegion, $followingRegionType)
-                    let $pageRange := trapi:getPageRange($textRegions)
-                    order by $pageRange:)
+                {   for $startRegion in trapi:getRegions($pages, $startRegionType)                    
+                    let $pageRange := number(trapi:getPageRange($startRegion))
+                    order by $pageRange
                     return
                         <map xmlns="http://www.w3.org/2005/xpath-functions">
                             {trapi:_getTextMetadata($pages, $startRegion, $followingRegionType, $chapterRegionType)}
