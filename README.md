@@ -4,7 +4,7 @@ This module provides access to Transkribus PageXML files via Xquery functions. I
 
 ## Usage
 
-See Documentation https://middle-high-german-conceptual-database.github.io/xquery-pagexml-transkribus-module/
+[See Documentation](https://middle-high-german-conceptual-database.github.io/xquery-pagexml-transkribus-module/)
 
 ## Transkribus specific features
 
