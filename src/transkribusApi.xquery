@@ -447,6 +447,206 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             where trapi:parseTranskribusCustomAttribute($textLine/@custom)//*:attr[@key=$key][@value=$value]
             return $textLine
         };
+        
+        
+        (:~
+        : Returns all annotations on lines of selected textregions
+        :          
+        : @param $textRegions           TextRegions.
+        : @return                       element()*
+        :)  
+        declare function trapi:getLinesAnnotations($textRegions as element()*) as element()*
+        {
+            (:($i, $lines, $result, $parsedAnnotations, $lengthOfPrevLines):)
+            trapi:getLineAnnotations(1, trapi:getLines($textRegions), (), (), 0)
+        };
+        
+        (:~
+        : Returns all annotations on selcted line of selected textregions
+        :          
+        : @param $i                     Position of current line.
+        : @param $lines                 all lines.
+        : @return                       element()*
+        :)  
+        declare function trapi:getLineAnnotations(
+            $i as xs:integer,
+            $lines as element()*, 
+            $result as element()*, 
+            $parsedAnnotations as element()*, 
+            $lengthOfPrevLines as xs:integer
+        ) as element()*
+        {
+            if ($i < count($lines)) 
+            then 
+                (:
+                <annotation tag="Wunder_Wallfahrt">
+                    <attr key="offset" value="33"/>
+                    <attr key="length" value="14"/>
+                    <attr key="continued" value="true"/>
+                </annotation>
+                :)
+                let $currentLineAnnotations := trapi:parseTranskribusCustomAttribute($lines[$i]/@custom)//*:annotation
+                let $newAnnotations := 
+                    for $annotation in $currentLineAnnotations
+                    let $currentAnnotation := 
+                        <annotation tag="{$annotation/@tag}">
+                            <attr key="offset" value="{xs:int($annotation/*:attr[@key="offset"]/@value) + $lengthOfPrevLines}"/>
+                            {
+                                for $attr in $annotation/*:attr
+                                where ($attr/@key != 'offset')
+                                return $attr
+                            }
+                        </annotation>
+                    let $tag    := $annotation/@tag
+                    let $offset := $annotation/*:attr[@key='offset']/@value
+                    let $length := $annotation/*:attr[@key='length']/@value
+                    where (
+                        $annotation/*:attr[@key='offset'] and
+                        (: ~~ if $annotation not in $parsedAnnotations ~~ :)
+                        (:not(exists($parsedAnnotations intersect $annotation)):)
+                        not(
+                            exists(
+                                $parsedAnnotations
+                                    [@tag=$tag]
+                                    [./*:attr[@key='offset'][@value=$offset]]
+                                    [./*:attr[@key='length'][@value=$length]]
+                            )
+                        )
+                    )
+                    
+                    return
+                        if ($annotation/*:attr[@key='continued']) then
+                        (: process annotations spanning multiple lines :)                        
+                        trapi:getContinuedAnnotations(
+                            $i + 1,
+                            $lines,                             
+                            $parsedAnnotations, 
+                            $currentAnnotation, 
+                            $annotation
+                        )                        
+                        else
+                        $currentAnnotation
+                let $lengthOfLine := string-length(trapi:getLineUnicode($lines[$i]))
+                
+                let $newResult := 
+                    for $annotation in $newAnnotations
+                    where (not($annotation/*:attr[@key='continued']))
+                    return $annotation                
+                let $result := ($result, $newResult)
+                
+                let $continuedAnnotations := 
+                    for $annotation in $newAnnotations
+                    where ($annotation/*:attr[@key='continued'])
+                    return $annotation
+                let $parsedAnnotations := ($parsedAnnotations, $currentLineAnnotations, $continuedAnnotations)
+                
+                return                
+                trapi:getLineAnnotations(
+                    $i + 1, 
+                    $lines, 
+                    $result, 
+                    $parsedAnnotations, 
+                    $lengthOfPrevLines + $lengthOfLine
+                )
+            else $result
+        };
+        
+        (:~
+        : Returns a merged annotation element of all parts of a continued annotation
+        : Helper function for trapi:getLineAnnotations
+        :          
+        : @param $i                     Position of current line.
+        : @param $lines                 all lines.
+        : @param $parsedAnnotations     already processed annotations.
+        : @param $currentAnnotation     current annotation object.
+        : @param $continuedAnnotations  all processed continued annotations.
+        : @return                       element()*
+        :)  
+        declare function trapi:getContinuedAnnotations(
+            $i as xs:integer, 
+            $lines as element()*,
+            $parsedAnnotations as element()*, 
+            $currentAnnotation as element(), 
+            $continuedAnnotations as element()*
+        ) as element()*
+        {
+            
+            let $curTag := $currentAnnotation/@tag                 
+            let $curOffset := $currentAnnotation/*:attr[@key='offset']/@value
+            let $curLength := $currentAnnotation/*:attr[@key='length']/@value
+            let $annotations := trapi:parseTranskribusCustomAttribute($lines[$i]/@custom)
+            let $continuedAnnotation := (
+                    $annotations/*:annotation
+                        [@tag=$curTag]
+                        [./*:attr[@key='continued']]
+                        [./*:attr[@key="offset" and @value="0"]]
+                )[1] 
+            
+            return             
+                if (
+                    exists($continuedAnnotation) and
+                    (:not(exists($parsedAnnotations intersect $continuedAnnotation)) and:)
+                    $i < count($lines) and                    
+                    not(
+                        exists(
+                            $continuedAnnotation
+                                [@tag=$curTag]
+                                [./*:attr[@key='offset'][@value=$curOffset]]
+                                [./*:attr[@key='length'][@value=$curLength]]
+                        )
+                    )
+                )
+                then 
+                    let $currentAnnotation := 
+                        <annotation tag="{$curTag}">
+                            <attr key="iterationCurrentAnnotation" value="debug"/>
+                            <attr key="offset" value="{$currentAnnotation/*:attr[@key="offset"]/@value}"/>
+                            <attr 
+                                key="length" 
+                                value="{
+                                    xs:int(string($currentAnnotation/*:attr[@key="length"]/@value)) +
+                                    xs:int(string($continuedAnnotation/*:attr[@key="length"]/@value))
+                                }"
+                            />
+                            {
+                                for $attr in $currentAnnotation/*:attr
+                                where (
+                                    $attr/@key != 'offset' and 
+                                    $attr/@key != 'length' and 
+                                    $attr/@key != 'continued'
+                                )
+                                return $attr
+                            }
+                        </annotation>
+                        
+                    return
+                    trapi:getContinuedAnnotations(
+                        $i + 1,
+                        $lines,                        
+                        ($parsedAnnotations, $continuedAnnotation),
+                        $currentAnnotation,
+                        ($continuedAnnotations, $continuedAnnotation)
+                    ) 
+                else ($continuedAnnotations, $currentAnnotation)
+        };
+        
+        
+        (:~
+        : Returns a normalized string of the selected line
+        :          
+        : @param $line                  line.
+        : @return                       xs:string
+        :)  
+        declare function trapi:getLineUnicode($line) as xs:string
+        {
+            let $norm := normalize-space(string($line//*:Unicode[1]))
+            let $break := ends-with($norm,'¬')
+            let $unicode := 
+                if (ends-with($norm,'¬'))
+                then replace($norm, '¬', '')
+                else concat($norm,' ')
+            return $unicode
+        };
 
 
 (: test functions :)
@@ -584,22 +784,15 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         let $lineData := 
         <lines>{
             for $textRegion in $textRegions
-                let $regionId := string($textRegion/@id)
+            let $regionId := string($textRegion/@id)
             return
-                for $line in trapi:getLines($textRegion)                        
-                    let $norm := normalize-space(string($line//*:Unicode[1]))
-                    let $break := ends-with($norm,'¬')
-                    let $unicode := 
-                        if (ends-with($norm,'¬'))
-                        then replace($norm, '¬', '')
-                        else concat($norm,' ')
-                    let $annotations := trapi:parseTranskribusCustomAttribute($line/@custom)
+                for $line in trapi:getLines($textRegion)
+                let $unicode := trapi:getLineUnicode($line)                 
                 return
-                    <line break='{$break}' id='{$line/@id}'>
+                    <line id='{$line/@id}'>
                         <textRegionId>{$regionId}</textRegionId>
                         <unicode>{$unicode}</unicode>                        
                         <length>{string-length($unicode)}</length>
-                        {$annotations}
                     </line>
         }</lines>
 
@@ -614,35 +807,24 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
             }</string>,
             <array key="annotations">
             {
-                for $line in $lineData//*:line
-                    let $prevLength := 
-                        sum(
-                            for $length in $line/preceding::*:length return number($length)
-                        )
+                let $annotations := trapi:getLinesAnnotations($textRegions)                
                 return
-                    for $annotation in $line//*:annotation
+                    for $annotation in $annotations
                     where $annotation/*:attr[@key='offset']
-                        let $oldOffset := $annotation/*:attr[@key='offset']/@value
-                        let $newOffset := number($oldOffset) + $prevLength 
-                        let $length := string($annotation/*:attr[@key='length']/@value)
-                        let $tag := string($annotation/@tag)
+                    let $offset := string($annotation/*:attr[@key='offset']/@value)
+                    let $length := string($annotation/*:attr[@key='length']/@value)
+                    let $tag := string($annotation/@tag)
                     return
                     <map>                        
-                        <string key="offset">{$newOffset}</string>
+                        <string key="offset">{$offset}</string>
                         <string key="length">{$length}</string>
-                        <string key="tag">{$tag}</string>    
-                        {
-                            if (exists($annotation/*:attr[@key='continued']))
-                            then <string key="continued">true</string>
-                            else ()
-                        }
+                        <string key="tag">{$tag}</string>
                         <map key="attributes">  
                         {
                             for $attr in $annotation/*:attr
                             where (
                                 $attr/@key != 'offset' and
-                                $attr/@key != 'length' and
-                                $attr/@key != 'continued'
+                                $attr/@key != 'length'
                             ) 
                             return
                                 <string key="{string($attr/@key)}">{data($attr/@value)}</string>
