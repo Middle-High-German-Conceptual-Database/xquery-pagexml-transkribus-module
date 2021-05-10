@@ -598,8 +598,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
                 )
                 then 
                     let $currentAnnotation := 
-                        <annotation tag="{$curTag}">
-                            <attr key="iterationCurrentAnnotation" value="debug"/>
+                        <annotation tag="{$curTag}">                            
                             <attr key="offset" value="{$currentAnnotation/*:attr[@key="offset"]/@value}"/>
                             <attr 
                                 key="length" 
