@@ -11,11 +11,11 @@ module namespace  trapi = "http://transkribusapi.mhdbdb.sbg.ac.at" ;
 
 declare namespace tei="http://www.tei-c.org/ns/1.0";
 declare namespace mets="http://www.loc.gov/METS/";
-declare namespace xlink="http://www.w3.org/2010/xslt-xquery-serialization";
+declare namespace xlink="http://www.w3.org/TR/xlink11/";
 declare namespace page="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15";
-declare namespace fn="http://www.w3.org/2005/xpath-functions";
-declare namespace err = "http://www.w3.org/2005/xqt-errors";
 declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
+declare namespace db = 'http://basex.org/modules/db';
+declare namespace convert = 'http://basex.org/modules/convert';
 
 (: get functions :)
     (: Document :)
@@ -636,10 +636,9 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         : @param $line                  line.
         : @return                       xs:string
         :)  
-        declare function trapi:getLineUnicode($line) as xs:string
+        declare function trapi:getLineUnicode($line as element()) as xs:string
         {
-            let $norm := normalize-space(string($line//*:Unicode[1]))
-            let $break := ends-with($norm,'¬')
+            let $norm := normalize-space(string($line//*:Unicode[1]))            
             let $unicode := 
                 if (ends-with($norm,'¬'))
                 then replace($norm, '¬', '')
@@ -775,8 +774,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     declare function trapi:_getTextData(
         $pages as element()*, 
         $startRegion as element()?, 
-        $followingRegionType as xs:string?, 
-        $chapterRegionType as xs:string?
+        $followingRegionType as xs:string?
     ) as element()*
     {
         let $textRegions := trapi:getTextRegions($pages, $startRegion, $followingRegionType)        
@@ -873,7 +871,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     : @param $db                    Name of database.        
     : @return JSON
     :)
-    declare function trapi:getDocumentsJSON($db as xs:string?)
+    declare function trapi:getDocumentsJSON($db as xs:string?) as JSON
     {
         let $result := 
             <array xmlns="http://www.w3.org/2005/xpath-functions"> 
@@ -901,7 +899,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
     : @param $docId                 ID of the document. 
     : @return JSON
     :)
-    declare function trapi:getDocumentJSON($db as xs:string?, $docId as xs:string?)
+    declare function trapi:getDocumentJSON($db as xs:string?, $docId as xs:string?) as JSON
     {
         let $result := 
             <array xmlns="http://www.w3.org/2005/xpath-functions"> 
@@ -940,7 +938,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         $startRegionType as xs:string?, 
         $followingRegionType as xs:string?, 
         $chapterRegionType as xs:string?
-    )
+    ) as JSON
     {
         let $pages := trapi:getPages($db, $docId)
         let $result := 
@@ -978,7 +976,7 @@ declare namespace output = 'http://www.w3.org/2010/xslt-xquery-serialization';
         $startRegionId as xs:string?, 
         $followingRegionType as xs:string?, 
         $chapterRegionType as xs:string?
-    )
+    ) as JSON
     {
         let $pages := trapi:getPages($db, $docId)
         let $startRegion := ($pages//*:TextRegion[@id=$startRegionId])[1]
