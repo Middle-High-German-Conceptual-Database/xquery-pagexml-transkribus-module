@@ -4,7 +4,7 @@
 : It is designed to be used in context of a Basex xml database, but should work with other xml databases as well.
 :
 : @author Peter Hinkelmanns
-: @version 1.0
+: @version 1.1
 :)
 
 module namespace  trapi = "http://transkribusapi.mhdbdb.sbg.ac.at" ;
